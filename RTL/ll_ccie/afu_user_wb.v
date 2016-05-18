@@ -24,7 +24,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,  EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-module afu_user2 #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512) 
+module afu_user_wb #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512) 
 (
    input 		    clk, 
    input 		    reset_n, 
@@ -75,14 +75,22 @@ module afu_user2 #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512)
    assign rd_req_en = r_rd_req_en;
 
    /* write port */
-   reg [ADDR_LMT-1:0] r_wr_req_addr, n_wr_req_addr; 
-   reg [MDATA-1:0] r_wr_req_mdata, n_wr_req_mdata;
-   reg 		   r_wr_req_en, n_wr_req_en;
-   reg [511:0] 	   r_wr_req_data,n_wr_req_data;
-   assign wr_req_addr = r_wr_req_addr;
-   assign wr_req_mdata = r_wr_req_mdata;
-   assign wr_req_en = r_wr_req_en;
-   assign wr_req_data = r_wr_req_data;
+   //reg [ADDR_LMT-1:0] r_wr_req_addr, n_wr_req_addr; 
+   //reg [MDATA-1:0] r_wr_req_mdata, n_wr_req_mdata;
+   //reg 		   r_wr_req_en, n_wr_req_en;
+   //reg [511:0] 	   r_wr_req_data,n_wr_req_data;
+   //assign wr_req_addr = r_wr_req_addr;
+   //assign wr_req_mdata = r_wr_req_mdata;
+   //assign wr_req_en = r_wr_req_en;
+   //assign wr_req_data = r_wr_req_data;
+   
+   /* buf write port */
+   reg [ADDR_LMT+3:0] write_addr, n_write_addr;
+   reg [31:0]	write_data, n_write_data;
+   reg 		write_en, n_write_en;
+   reg 	        write_now, n_write_now;
+   reg 	        write_valid;
+
 
    reg [4:0] 		   r_state, n_state;
    reg 			   r_done,n_done;
@@ -91,8 +99,6 @@ module afu_user2 #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512)
 
    reg [511:0] vec1;
    reg [511:0] mat1;
-   reg [511:0] res_out;
-   reg [512:0] res_out_back;
    reg [31:0] res;
    reg [31:0] res_back;
    reg [31:0] M;
@@ -102,14 +108,13 @@ module afu_user2 #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512)
    reg [ADDR_LMT-1:0] idxN;
    reg [ADDR_LMT-1:0] idxP;
    reg [31:0] addr_base;
-   reg [4:0] count;
 
    reg [31:0] res_tmp;
  
    reg [31:0] res_relu;
    reg [31:0] res_tmp_t;
 
-   reg [31:0] iter;
+
 
    array_mul mul1(
 	   .array1	(mat1[511:0]), 
@@ -123,23 +128,47 @@ module afu_user2 #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512)
            .out 	(res_relu)
    );
 
-   //array_mul mul2(
-   //        .array1	(tmp_data), 
-   //        .array2	(tmp_data),
-   //        .res		(res[63:32])
-   //);
+   write_buf wbuf(
+	   .clk 	(clk),
+	   .reset_n 	(reset_n),
+	   
+	   .wr_req_addr	(wr_req_addr),
+	   .wr_req_mdata 	(wr_req_mdata), 
+	   .wr_req_data	(wr_req_data), 
+	   .wr_req_en 	(wr_req_en), 
+	   .wr_req_almostfull	(wr_req_almostfull), 
+
+
+	   .wr_rsp0_valid	(wr_rsp0_valid), 
+	   .wr_rsp0_mdata	(wr_rsp0_mdata), 
+	   .wr_rsp1_valid	(wr_rsp1_valid), 
+	   .wr_rsp1_mdata	(wr_rsp1_mdata), 
+
+
+	   .wr_now 		(write_now),
+	   .wr_addr 		(write_addr),
+	   .wr_data		(write_data),
+	   .wr_en		(write_en),
+
+	   .wr_valid		(write_valid), 
+
+	   .start 		(start)
+   );
+
 
    always@(posedge clk)
      begin
 	r_state <= rst ? 'd0 : n_state;
 	r_done <= rst ? 1'b0 : n_done;   
+
 	r_rd_req_addr <= rst ? 'd0 : n_rd_req_addr;  
 	r_rd_req_mdata <= rst ? 'd0 : n_rd_req_mdata;
 	r_rd_req_en <= rst ? 1'b0 : n_rd_req_en;
-	r_wr_req_addr <= rst ? 'd0 : n_wr_req_addr;  
-	r_wr_req_mdata <= rst ? 'd0 : n_wr_req_mdata;
-	r_wr_req_en <= rst ? 1'b0 : n_wr_req_en;
-	r_wr_req_data <= rst ? 'd0 : n_wr_req_data;
+
+	write_addr <= rst ? 'd0 : n_write_addr;  
+	write_en <= rst ? 1'b0 : n_write_en;
+	write_data <= rst ? 'd0 : n_write_data;
+	write_now <= rst ? 1'd0 : n_write_now;
 
 	res_tmp_t <= res;
      end
@@ -154,10 +183,10 @@ module afu_user2 #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512)
 	   n_rd_req_mdata = r_rd_req_mdata;
 	   n_rd_req_en = 1'b0;
 	   /* write port signals */
-	   n_wr_req_addr = r_wr_req_addr;  
-	   n_wr_req_mdata = r_wr_req_mdata;
-	   n_wr_req_en = 1'b0;
-	   n_wr_req_data = r_wr_req_data;
+	   n_write_addr = write_addr;  
+	   n_write_data = write_data;
+	   n_write_en = 1'b0;
+	   n_write_now = 1'b0;
 
 	   case(r_state)
 		   'd0:
@@ -172,10 +201,9 @@ module afu_user2 #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512)
 				   n_state = 'd1;
 				   res_back = 0;
 				   res = 0;
+
 				   vec1 = 0;
 				   mat1 = 0;
-				   res_out = 0;
-				   res_out_back = 0;
 				   res = 0;
 				   res_back = 0;
 				   M = 0;
@@ -185,7 +213,6 @@ module afu_user2 #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512)
 				   idxN = 0;
 				   idxP = 0;
 				   addr_base = 0;
-				   count = 0;
 
 				   n_done = 0;
 				   $display("Sending request for %x", n_rd_req_addr);
@@ -214,7 +241,7 @@ module afu_user2 #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512)
 			   $display("D2");
 			   if (idxN >= N)
 			   begin
-				   n_state = 'd12;
+				   n_state = 'd13;
 			   end
 			   else 
 			   begin
@@ -241,18 +268,11 @@ module afu_user2 #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512)
 		   'd4:
 		   begin
 			   $display("D4");
-			   //if (idxN >= N)
-			   //begin
-			   //        n_state = 'd13;
-			   //end
-			   //else 
-			   //begin
 			   n_rd_req_addr = addr_base + 2 + (idxN<<1);
 			   n_rd_req_en = 1'b1;
 			   n_rd_req_mdata = 0;
 			   n_state = 'd5;
 			   $display("Sending request for %x", n_rd_req_addr);
-			   //end
 		   end
 		   'd5:
 		   begin
@@ -274,7 +294,7 @@ module afu_user2 #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512)
 			   res_back = res;
 			   idxN = idxN + 1;
 			   n_state = 'd2;
-			   $display("res: %d", res[31:0]);
+			   $display("res: %d:0x%h", res, res);
 			   $display("idxN: %d", idxN);
 			   $display("state: %d", n_state);
 		   end
@@ -284,9 +304,9 @@ module afu_user2 #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512)
 			   begin
 				   idxN = 0;
 				   idxM = idxM + 1;
-				   //res_back = 0;
 				   n_state = 'd2;
 				   addr_base = addr_base + N*2;
+				   res_back = 0;
 				   $display("idxM: %d", idxM);
 			   end
 			   if (idxM >= M)
@@ -297,42 +317,22 @@ module afu_user2 #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512)
 		   'd11:
 		   begin
 			   $display("D11");
-			   $display("count: %d", count);
-			   if (count == 0)
+			   if(!wr_req_almostfull)
 			   begin
-				   n_state = 'd15;
+				   n_write_addr = 'd0 + idxM;
+				   n_write_data = 0;
+				   n_write_en = 1'b0;
+				   n_write_now = 1'd1;
+				   n_state ='d12;
 			   end
-			   else 
-			   begin
-				   for (iter = count; iter < 16; iter++) 
-				   begin
-					   res_out = (res_out >> 32);
-				   end
-				   
-				   count = 0;
-				   if(!wr_req_almostfull)
-				   begin
-					   n_wr_req_addr = 'd1 + idxM >> 4;
-					   n_wr_req_data = res_out;
-					   n_wr_req_en = 1'b1;
-					   n_state = 'd14;
-				   end
-			   end
+
 		   end
 		   'd12:
 		   begin
 			   $display("D12");
-			   res_out = {res_relu, res_out_back[511:32]};
-			   res_out_back = res_out;
-			   res_back = 0;
-			   count = count + 1;
-			   n_state = 'd7;
-			   $display("count: %d", count);
-			   $display("Res_out: %d", res_out);
-			   if (count >= 16)
+			   if(write_valid)
 			   begin
-				   count = 0;
-				   n_state = 'd13;
+				   n_state = 'd15;
 			   end
 		   end
 		   'd13:
@@ -340,16 +340,19 @@ module afu_user2 #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512)
 			   $display("D13");
 			   if(!wr_req_almostfull)
 			   begin
-				   n_wr_req_addr = 'd0 + idxM >> 4;
-				   n_wr_req_data = res_out;
-				   n_wr_req_en = 1'b1;
+				   n_write_addr = 'd0 + idxM;
+				   n_write_data = res_relu;
+				   //n_write_data = res;
+				   n_write_en = 1'b1;
+				   n_write_now = 1'b0;
 				   n_state = 'd14;
+				   $display("Write Data %d @ %d", res_relu, n_write_addr);
 			   end
 		   end
 		   'd14:
 		   begin
 			   $display("D14");
-			   if(wr_rsp0_valid || wr_rsp1_valid)
+			   if(write_valid)
 			   begin
 				   n_state = 'd7;
 			   end

@@ -194,7 +194,7 @@ module afu_core #(MDATA = 14)
    //   rd_req*, rd_rsp*, wr_req*, and wr_rsp* ports
    // - Control information can go in afu_context
    //-----------------------------------------------------------
-   afu_user2 #(
+   afu_user_wb #(
 	      .ADDR_LMT(ADDR_LMT),
               .MDATA   (MDATA),
 	      .CACHE_WIDTH (CACHE_WIDTH)
