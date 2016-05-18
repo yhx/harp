@@ -439,7 +439,7 @@ int llApp::run()
 #ifdef ONECL
 		const int M = 16, N = 32, P = 16;
 #else 
-		const int M = 9, N = 16, P = 16;
+		const int M = 20, N = 16, P = 16;
 #endif
 		ptr[0] = M;
 		ptr[1] = N;
