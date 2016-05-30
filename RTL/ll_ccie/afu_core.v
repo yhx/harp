@@ -231,9 +231,9 @@ module afu_core #(MDATA = 14)
         // ctrl 
 	.start ( (tx_rd_state==TX_RD_STATE_RUN)&&
 		 (tx_wr_state==TX_WR_STATE_RUN) ),
-	.done        (uafu_done)
-	//,
-	//.afu_context (ctx_word)
+	.done        (uafu_done),
+
+	.afu_context (ctx_word)
 	);
 
    //-----------------------------------------------------------

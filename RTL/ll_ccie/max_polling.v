@@ -1,6 +1,6 @@
 module max_pooling (
-	input [127: 0] in;
-	output [31:0] out;
+	input [127: 0] in,
+	output [31:0] out
 );
 
 wire signed [31:0] in0;
@@ -21,3 +21,4 @@ assign max1 = in2>in3?in2:in3;
 
 assign out = max0>max1?max0:max1;
 
+endmodule // max_pooling

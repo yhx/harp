@@ -436,32 +436,58 @@ int llApp::run()
 
 
 		int *ptr = (int*)pSource;
-#ifdef ONECL
-		const int M = 16, N = 32, P = 16;
-#else 
-		const int M = 20, N = 16, P = 16;
-#endif
+		const int M = 20, N = 1, P = 20;
 		ptr[0] = M;
 		ptr[1] = N;
 		ptr[2] = P;
 
-
-#ifdef ONECL
-		for(uint32_t i = 0; i < 2*N; i++) {
-			for (uint32_t j=0; j<16; j++) {
-				ptr[16 + i*16 + j] = j-i;
-			}
-		}
-#else 
+		int count_r = 0;
 		for (uint32_t k=0; k<M; k++) {
 			for(uint32_t i = 0; i < N; i++) {
 				for (uint32_t j=0; j<16; j++) {
-					ptr[16 + k*N*N*2 + i*N*2 + j] = j-i + k;
-					ptr[32 + k*N*N*2 + i*N*2 + j] = j-i - k;
+					ptr[16 + k*N*16 + i*16 + j] = count_r;
+					//printf("%d@%d ", count_r, 16+k*N*16+i*16+j);
+					count_r++;
 				}
+				printf(" \t ");
 			}
+			printf("\n");
 		}
-#endif
+
+		for (uint32_t k=0; k<P; k++) {
+			for(uint32_t i = 0; i < N; i++) {
+				for (uint32_t j=0; j<16; j++) {
+					ptr[16 + M*N*16 + k*N*16 + i*16 + j] = count_r;
+					//printf("%d@%d ", count_r, 16+M*N*16+k*N*16+i*16+j);
+					count_r--;
+		 		}
+				printf(" \t ");
+			}
+			printf("\n");
+		}
+
+		for (uint32_t k=0; k<M; k++) {
+			for(uint32_t i = 0; i < N; i++) {
+				for (uint32_t j=0; j<16; j++) {
+					printf("%d ", ptr[16 + k*N*16 + i*16 + j]);
+				 	//printf("%d@%d ", ptr[16 + k*N*16 + i*16 + j], 16+k*N*16+i*16+j);
+				}
+				printf(" \t ");
+			}
+			printf("\n");
+		}
+
+		for (uint32_t k=0; k<P; k++) {
+			for(uint32_t i = 0; i < N; i++) {
+				for (uint32_t j=0; j<16; j++) {
+					printf("%d ", ptr[16 + M*N*16 + k*N*16 + i*16 + j]);
+					//printf("%d@%d ", ptr[16 + M*N*16 + k*N*16 + i*16 + j], 16+M*N*16+k*N*16+i*16+j);
+				}
+				printf(" \t ");
+			}
+			printf("\n");
+		}
+
 
 		// Buffers have been initialized
 		////////////////////////////////////////////////////////////////////////////
@@ -500,32 +526,59 @@ int llApp::run()
 		// Stop the AFU
 
 		/* change pointer to write region space */
-		printf("Src: ");
-		for(uint32_t k =0; k<M; k++) {
-			int res = 0;
-#ifdef ONECL
-			for(uint32_t i = 0; i < 2*N; i++) {
-				for (uint32_t j=0; j<8; j++) {
-					res += (j-i)*(j+8-i);
-				}
-			}
-#else
-			for(uint32_t i = 0; i < N; i++) {
-				for (uint32_t j=0; j<16; j++) {
-					res += (j-i+k)*(j-i-k);
-				}
-			}
-#endif
-			printf("%d ", res); 
-		}
-		printf("\n");
 
-		ptr = (int*)(pDest);
-		printf("Dst: ");
-		for(uint32_t k =0; k<M; k++) {
-			printf("%d ", ptr[k]); 
+		printf("Src: ");
+		for (uint32_t l=0; l<P; l++) {
+			for(uint32_t k =0; k<M; k++) {
+				int res = 0;
+				for(uint32_t i = 0; i < N; i++) {
+					for (uint32_t j=0; j<16; j++) {
+						res += (ptr[16 + k*N*16 + i*16 + j] * ptr[16 + M*N*16 + l*N*16 + i*16 + j]);
+					}
+				}
+				printf("%d ", res); 
+			}
+			printf("\n");
 		}
-		printf("\n");
+
+		int *ptr2 = (int*)(pDest);
+		printf("Dst: ");
+		for(uint32_t l=0; l<P; l++) {
+			for(uint32_t k =0; k<M; k++) {
+				printf("%d ", ptr2[k + l * M]); 
+			}
+			printf("\n");
+		}
+
+		bool check = true;
+		printf("Check: ");
+		for (uint32_t l=0; l<P; l++) {
+			for(uint32_t k =0; k<M; k++) {
+				int res = 0;
+				for(uint32_t i = 0; i < N; i++) {
+					for (uint32_t j=0; j<16; j++) {
+						res += (ptr[16 + k*N*16 + i*16 + j] * ptr[16 + M*N*16 + l*N*16 + i*16 + j]);
+					}
+				}
+				if (res != ptr2[k + l * M])
+				{
+					check = false;
+					printf("%d:%d\n", res, ptr2[k+ l * M]); 
+				}
+			}
+		}
+
+		if (check)
+			printf("<!RIGHT!><!RIGHT!><!RIGHT!><!RIGHT!><!RIGHT!>\n");
+		else
+			printf("<!WRONG!><!WRONG!><!WRONG!><!WRONG!><!WRONG!>\n");
+
+
+
+
+
+
+
 
 
 		// Issue Stop Transaction and wait for OnTransactionStopped
