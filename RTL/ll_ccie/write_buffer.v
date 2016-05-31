@@ -1,31 +1,33 @@
 module write_buffer #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_WIDTH = 32)
 	(
 		// Global signal
-		input 		    	 clk, 
-		input 		    	 rst, 
+		input 		    	 	clk, 
+		input 		    	 	rst, 
 		// Write Request 
-		output [ADDR_LMT-1:0]    wr_req_addr, 
-		output [MDATA-1:0] 	 wr_req_mdata, 
-		output [CACHE_WIDTH-1:0] wr_req_data, 
-		output 		    	 wr_req_en, 
-		input 		    	 wr_req_almostfull, 
+		output [ADDR_LMT-1:0]    	wr_req_addr, 
+		output [MDATA-1:0] 	 	wr_req_mdata, 
+		output [CACHE_WIDTH-1:0] 	wr_req_data, 
+		output 		    	 	wr_req_en, 
+		input 		    	 	wr_req_almostfull, 
 
 		// Write Response 
-		input 		    	 wr_rsp0_valid, 
-		input [MDATA-1:0] 	 wr_rsp0_mdata, 
-		input 		    	 wr_rsp1_valid, 
-		input [MDATA-1:0] 	 wr_rsp1_mdata, 
+		input 		    	 	wr_rsp0_valid, 
+		input [MDATA-1:0] 	 	wr_rsp0_mdata, 
+		input 		    	 	wr_rsp1_valid, 
+		input [MDATA-1:0] 	 	wr_rsp1_mdata, 
 
 		// Input Write Request
-		input 		    	 wr_now,
-		input [ADDR_LMT+3:0]	 wr_addr,
-		input [DATA_WIDTH-1:0] 	 wr_data,
-		input [MDATA-1:0] 	 wr_mdata,
-		input               	 wr_en,
+		input 		    	 	wr_now,
+		input [ADDR_LMT+3:0]	 	wr_addr,
+		input [CACHE_WIDTH-1:0]		wr_data,
+		input [MDATA-1:0] 	 	wr_mdata,
+		input               	 	wr_en,
+		input 				wr_direct,
 		// Input Write Response
-		output 			 wr_valid,
+		output 			 	wr_valid,
+		output 			 	wr_real_valid,
 
-		input 			 start
+		input 			 	start
 	);
 
 	reg [ADDR_LMT-1:0]    r_wr_req_addr, n_wr_req_addr;
@@ -40,7 +42,7 @@ module write_buffer #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_WIDTH =
 
 	reg [2:0] r_state, n_state;
 	localparam [2:0] 	STATE_WB_IDLE = 'd0,
-				STATE_WB_WR = 'd1;
+	STATE_WB_WR = 'd1;
 
 
 	wire [ADDR_LMT-1:0] cl_addr;
@@ -61,7 +63,7 @@ module write_buffer #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_WIDTH =
 
 	reg r_wr_valid, n_wr_valid;
 
-	//assign wr_valid = wr_rsp0_valid | wr_rsp1_valid | r_wr_valid;
+	assign wr_real_valid = wr_rsp0_valid | wr_rsp1_valid;
 	assign wr_valid = r_wr_valid;
 
 	always@(posedge clk)
@@ -106,37 +108,60 @@ module write_buffer #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_WIDTH =
 			end
 			STATE_WB_WR:
 			begin
-				$display("[WB_WR] En:%d, Now:%d", wr_en, wr_now);
-				if (wr_en) 
+				$display("[WB_WR] En:%d, Now:%d, Direct:%d", wr_en, wr_now, wr_direct);
+				if (wr_direct) 
 				begin
-					$display("[WB_WR] L_WR: 0x%h@%d", wr_data, index_addr);
-					
-					buffer[index_addr+: 32] = wr_data;
-					$display("[WB_WR] Buffer: 0x%h", buffer);
-					n_wr_valid = 1'b1;
-					cur_addr = cl_addr;
-					cacheOn = 1'b1;
-				end
-
-				if ((offset_addr == 4'd15) && (wr_en) || (wr_now) && (cacheOn))
-				begin
-					//n_wr_valid = 1'b0;
 					if (!wr_req_almostfull)
 					begin
-						n_wr_req_data = buffer;
-						$display("[WB_WR] MDATA: %d", wr_data);
-						n_wr_req_mdata = wr_en ? wr_mdata : 0;
-						n_wr_req_en = cacheOn;
-						n_wr_req_addr = cur_addr;
+						$display("[WB_WR] D_WR: 0x%h@%d", wr_data, cl_addr);
+						n_wr_req_data = wr_data;
+						n_wr_req_mdata = wr_mdata;
+						n_wr_req_addr = cl_addr;
+						n_wr_req_en = 1'b1;
+						n_wr_valid = 1'b0;
+
 						$display("[WB_WR] R_WR: 0x%h@%d", n_wr_req_data, n_wr_req_addr);
 					end
-					cacheOn = 1'b0;
 				end
 				else 
 				begin
-					n_wr_req_en = 'd0;
+					if (wr_en) 
+					begin
+						$display("[WB_WR] L_WR: 0x%h@%d", wr_data, index_addr);
+
+						buffer[index_addr+: 32] = wr_data[31:0];
+						$display("[WB_WR] Buffer: 0x%h", buffer);
+						n_wr_valid = 1'b1;
+						cur_addr = cl_addr;
+						cacheOn = 1'b1;
+					end
+
+					if ((((offset_addr == 4'd15) && wr_en) || (wr_now && cacheOn)) && (!wr_direct))
+					begin
+						n_wr_valid = 1'b0;
+						if (!wr_req_almostfull)
+						begin
+							$display("Cached?:%d", cacheOn);
+							n_wr_req_data = buffer;
+							//$display("[WB_WR] MData: %d", wr_mdata);
+							n_wr_req_mdata = wr_en ? wr_mdata : 0;
+							n_wr_req_en = cacheOn;
+							n_wr_req_addr = cur_addr;
+							$display("[WB_WR] R_WR: 0x%h@%d", n_wr_req_data, n_wr_req_addr);
+						end
+						else 
+						begin
+							n_wr_req_en = 1'b0;
+							$display("[WB_ERROR]: Too much wr!!!"); 
+						end
+						cacheOn = 1'b0;
+					end
+					else 
+					begin
+						n_wr_req_en = 'd0;
+					end
+					$display("Local write %d, Real write finished: %d, finshed: %d", n_wr_valid, wr_rsp0_valid | wr_rsp1_valid, wr_valid);
 				end
-				$display("Local write %d, Real write finished: %d, finshed: %d", n_wr_valid, wr_rsp0_valid | wr_rsp1_valid, wr_valid);
 			end
 			default:
 			begin

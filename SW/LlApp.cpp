@@ -436,7 +436,8 @@ int llApp::run()
 
 
 		int *ptr = (int*)pSource;
-		const int M = 20, N = 1, P = 20;
+		//INIT
+		const int M = 2, N = 3, P = 2;
 		ptr[0] = M;
 		ptr[1] = N;
 		ptr[2] = P;
@@ -541,11 +542,18 @@ int llApp::run()
 			printf("\n");
 		}
 
-		int *ptr2 = (int*)(pDest);
-		printf("Dst: ");
-		for(uint32_t l=0; l<P; l++) {
-			for(uint32_t k =0; k<M; k++) {
-				printf("%d ", ptr2[k + l * M]); 
+		int *ptr2 = (int*)(ptr + 16*(1 + N*M + N*P));
+		printf("Dst1: ");
+		for (int i=0; i< M*P; i++)
+			printf("%d ", ptr2[i]);
+		printf("\n");
+
+		printf("Dst2: ");
+		for (uint32_t i=0; i<N; i++) {
+			for(uint32_t l=0; l<P; l++) {
+				for(uint32_t k =0; k<M; k++) {
+					printf("%d ", ptr2[k + l * M + i*(((M*P+15)>>4)<<4)]); 
+				}
 			}
 			printf("\n");
 		}
@@ -555,31 +563,41 @@ int llApp::run()
 		for (uint32_t l=0; l<P; l++) {
 			for(uint32_t k =0; k<M; k++) {
 				int res = 0;
+				int res2 = 0;
 				for(uint32_t i = 0; i < N; i++) {
 					for (uint32_t j=0; j<16; j++) {
 						res += (ptr[16 + k*N*16 + i*16 + j] * ptr[16 + M*N*16 + l*N*16 + i*16 + j]);
 					}
 				}
-				if (res != ptr2[k + l * M])
-				{
+				res2 = ptr2[l*M + k];
+				if (res != ptr2[l*M + k]) {
 					check = false;
-					printf("%d:%d\n", res, ptr2[k+ l * M]); 
+					printf("%d:%d\n", res, res2); 
 				}
 			}
 		}
+		//for (uint32_t l=0; l<P; l++) {
+		//	for(uint32_t k =0; k<M; k++) {
+		//		int res = 0;
+		//		int res2 = 0;
+		//		for(uint32_t i = 0; i < N; i++) {
+		//			for (uint32_t j=0; j<16; j++) {
+		//				res += (ptr[16 + k*N*16 + i*16 + j] * ptr[16 + M*N*16 + l*N*16 + i*16 + j]);
+		//			}
+		//			res2 += ptr2[k+ l*M + i*(((M*P+15)>>4)<<4)]; 
+		//		}
+		//		if (res != res2)
+		//		{
+		//			check = false;
+		//			printf("%d:%d\n", res, res2); 
+		//		}
+		//	}
+		//}
 
 		if (check)
 			printf("<!RIGHT!><!RIGHT!><!RIGHT!><!RIGHT!><!RIGHT!>\n");
 		else
 			printf("<!WRONG!><!WRONG!><!WRONG!><!WRONG!><!WRONG!>\n");
-
-
-
-
-
-
-
-
 
 		// Issue Stop Transaction and wait for OnTransactionStopped
 		MSG("Stopping SPL Transaction");

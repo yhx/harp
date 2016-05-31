@@ -30,11 +30,11 @@ module array_mul_pl #(CACHE_WIDTH = 512, DATA_WIDTH = 32)
 
 	always@(posedge clk)
 	begin
-		enable1 <= rst ? 1'd0 : enable;
-		enable2 <= rst ? 1'd0 : enable1;
-		enable3 <= rst ? 1'd0 : enable2;
-		enable4 <= rst ? 1'd0 : enable3;
-		enable0 <= rst ? 1'd0 : enable4;
+		enable1 <= rst ? 1'b0 : enable;
+		enable2 <= rst ? 1'b0 : enable1;
+		enable3 <= rst ? 1'b0 : enable2;
+		enable4 <= rst ? 1'b0 : enable3;
+		enable0 <= rst ? 1'b0 : enable4;
 	end
 
 	//multiplier size 16
@@ -45,7 +45,7 @@ module array_mul_pl #(CACHE_WIDTH = 512, DATA_WIDTH = 32)
 			begin
 				if (enable && (!rst))
 				begin
-					$display("ARRAY1: %d, ARRAY2: %d", array1[i*DATA_WIDTH +: DATA_WIDTH], array2[i*DATA_WIDTH +: DATA_WIDTH]);
+					//$display("ARRAY1: %d, ARRAY2: %d", array1[i*DATA_WIDTH +: DATA_WIDTH], array2[i*DATA_WIDTH +: DATA_WIDTH]);
 					mul_res[i] <= array1[i*DATA_WIDTH +: DATA_WIDTH] * array2[i*DATA_WIDTH +: DATA_WIDTH];
 				end
 				else 
@@ -64,7 +64,7 @@ module array_mul_pl #(CACHE_WIDTH = 512, DATA_WIDTH = 32)
 			begin
 				if (enable1)
 				begin
-					$display("MUL_RES: %d, %d", mul_res[j*2], mul_res[j*2+1]);
+					//$display("MUL_RES: %d, %d", mul_res[j*2], mul_res[j*2+1]);
 					add_1_res[j] <= mul_res[j*2] + mul_res[j*2 + 1];
 				end
 				else
@@ -83,7 +83,7 @@ module array_mul_pl #(CACHE_WIDTH = 512, DATA_WIDTH = 32)
 			begin
 				if (enable2)
 				begin
-					$display("ADD_1_RES: %d, %d", add_1_res[k*2], add_1_res[k*2+1]);
+					//$display("ADD_1_RES: %d, %d", add_1_res[k*2], add_1_res[k*2+1]);
 					add_2_res[k] <= add_1_res[k*2] + add_1_res[k*2 + 1];
 				end
 				else
@@ -102,7 +102,7 @@ module array_mul_pl #(CACHE_WIDTH = 512, DATA_WIDTH = 32)
 			begin
 				if (enable3)
 				begin
-					$display("ADD_2_RES: %d, %d", add_2_res[l*2], add_1_res[l*2+1]);
+					//$display("ADD_2_RES: %d, %d", add_2_res[l*2], add_1_res[l*2+1]);
 					add_3_res[l] <= add_2_res[l*2] + add_2_res[l*2 + 1];
 				end
 				else
@@ -117,7 +117,7 @@ module array_mul_pl #(CACHE_WIDTH = 512, DATA_WIDTH = 32)
 	begin
 		if (enable4)
 		begin
-			$display("ADD_3_RES: %d@%d, %d@%d", add_3_res[0], 0, add_3_res[1], 1);
+			//$display("ADD_3_RES: %d@%d, %d@%d", add_3_res[0], 0, add_3_res[1], 1);
 			add_0_res <= add_3_res[0] + add_3_res[1];
 		end
 		else

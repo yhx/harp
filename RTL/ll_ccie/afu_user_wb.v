@@ -40,11 +40,13 @@ module afu_user_wb #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_WIDTH = 
 
 	/* buf write port */
 	wire [ADDR_LMT+3:0] wb_req_addr;
-	wire [31:0]	wb_req_data;
+	wire [CACHE_WIDTH-1:0]	wb_req_data;
 	wire [MDATA-1:0]	wb_req_mdata;
 	wire 		wb_req_en;
 	wire 	        wb_req_now;
+	wire 	        wb_req_direct;
 	wire 	        wb_rsp_valid;
+	wire 	        wb_rsp_rvalid;
 
 	wire 		user_clk;
 
@@ -83,14 +85,16 @@ module afu_user_wb #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_WIDTH = 
 		.wr_data		(wb_req_data),
 		.wr_mdata		(wb_req_mdata),
 		.wr_en			(wb_req_en),
+		.wr_direct		(wb_req_direct),
 
 		.wr_valid		(wb_rsp_valid), 
+		.wr_real_valid		(wb_rsp_rvalid), 
 
 		.start 			(start)
 	);
 
-	matrix_multiply #(
-	//matrix_multiply_pl #(
+	//matrix_multiply #(
+	matrix_multiply_pl #(
 		.ADDR_LMT(ADDR_LMT),
 		.MDATA(MDATA), 
 		.CACHE_WIDTH(CACHE_WIDTH),
@@ -117,11 +121,13 @@ module afu_user_wb #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_WIDTH = 
 		.wr_req_data       	(wb_req_data),
 		.wr_req_en         	(wb_req_en),
 		.wr_req_now         	(wb_req_now),
+		.wr_req_direct         	(wb_req_direct),
 		.wr_req_almostfull 	(wr_req_almostfull),
 
 
 		// wr rsp 
 		.wr_rsp_valid     	(wb_rsp_valid),
+		.wr_rsp_rvalid     	(wb_rsp_rvalid),
 
 		// ctrl 
 		.start			(start),

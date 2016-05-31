@@ -279,7 +279,9 @@ module afu_core #(MDATA = 14)
               // afu_user not done, handle its wr_req
               if (!uafu_done) begin
                  cor_tx_wr_valid <= uafu_wr_req_en;
-                 cor_tx_wr_addr  <= ctx_dst_ptr + uafu_wr_req_addr;
+                 // TODO: Write to and read from different address.
+		 //cor_tx_wr_addr  <= ctx_dst_ptr + uafu_wr_req_addr;
+                 cor_tx_wr_addr  <= ctx_src_ptr + uafu_wr_req_addr;
                  cor_tx_wr_data  <= uafu_wr_req_data;
                  cor_tx_wr_mdata <= uafu_wr_req_mdata;
               end else begin
