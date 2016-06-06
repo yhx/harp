@@ -438,7 +438,7 @@ int matrixMulApp::run()
 		int *ptr = (int*)pSource;
 		//INIT
 		FILE *f = NULL;
-		const int M = 200, N = 15, P = 10;
+		const int M = 240, N = 15, P = 5;
 		const int M_ = ((M+15)>>4)<<4;
 		ptr[0] = M;
 		ptr[1] = N;
@@ -582,29 +582,58 @@ int matrixMulApp::run()
 
 		int *ptr2 = (int*)(ptr + 16*(1 + N*M + N*P));
 
-		f = fopen("TEMP_RES.txt", "w+");
-		printf("TEMP RES: ");
-		for(uint32_t i=0; i<N; i++) {
-			for(uint32_t l=0; l<P; l++) {
-				printf("\t");
-				for(uint32_t k =0; k<M; k++) {
-					printf("%d ", ptr2[i *P *(M_) + l * (M_) + k]); 
-					fprintf(f, "%d ", ptr2[i *P *(M_) + l * (M_) + k]); 
-				}
-			}
-			printf("\n");
-			fprintf(f, "\n");
-		}
-		fflush(f);
-		fclose(f);
+		//f = fopen("TEMP_RES.txt", "w+");
+		//printf("TEMP RES: ");
+		//for(uint32_t i=0; i<N; i++) {
+		//	for(uint32_t l=0; l<P; l++) {
+		//		printf("\t");
+		//		for(uint32_t k =0; k<M; k++) {
+		//			printf("%d ", ptr2[i *P *(M_) + l * (M_) + k]); 
+		//			fprintf(f, "%d ", ptr2[i *P *(M_) + l * (M_) + k]); 
+		//		}
+		//	}
+		//	printf("\n");
+		//	fprintf(f, "\n");
+		//}
+		//fflush(f);
+		//fclose(f);
+		
+		//bool check_t = true;
+		//printf("Check TEMP: ");
+		//f = fopen("CHECK_TMP.txt", "w+");
+		//for (uint32_t l=0; l<P; l++) {
+		//	for(uint32_t k =0; k<M; k++) {
+		//		int res = 0;
+		//		int res2 = 0;
+		//		for(uint32_t i = 0; i < N; i++) {
+		//			for (uint32_t j=0; j<16; j++) {
+		//				res += (ptr[16 + k*N*16 + i*16 + j] * ptr[16 + M*N*16 + l*N*16 + i*16 + j]);
+		//			}
+		//			res2 += ptr2[M_*i*P + l*(M_) + k];
+		//		}
+		//		if (res != res2) {
+		//			check_t = false;
+		//			fprintf(f, "%d:%d @(%d, %d)\n", res, res2, k, l); 
+		//		}
+		//	}
+		//}
+		//fflush(f);
+		//fclose(f);
+
+		//if (check_t)
+		//	printf("\t<!MATCH!><!MATCH!><!MATCH!><!MATCH!><!MATCH!>\n");
+		//else
+		//	printf("\t<!DIFER!><!DIFER!><!DIFER!><!DIFER!><!DIFER!>\n");
 
 		printf("Hardware: ");
 		f = fopen("Hardware.txt", "w+");
 		for(uint32_t l=0; l<P; l++) {
 			printf("\t");
 			for(uint32_t k =0; k<M; k++) {
-				printf("%d ", ptr2[M_*N*P + l * (M_) + k]); 
-				fprintf(f, "%d ", ptr2[M_*N*P + l * (M_) + k]); 
+				//int t = ptr2[M_*N*P + l * (M_) + k];
+				int t = ptr2[l * (M_) + k];
+				printf("%d ", t); 
+				fprintf(f, "%d ", t); 
 			}
 			fprintf(f, "\n");
 			printf("\n");
@@ -612,32 +641,6 @@ int matrixMulApp::run()
 		fflush(f);
 		fclose(f);
 
-		bool check_t = true;
-		printf("Check TEMP: ");
-		f = fopen("CHECK_TMP.txt", "w+");
-		for (uint32_t l=0; l<P; l++) {
-			for(uint32_t k =0; k<M; k++) {
-				int res = 0;
-				int res2 = 0;
-				for(uint32_t i = 0; i < N; i++) {
-					for (uint32_t j=0; j<16; j++) {
-						res += (ptr[16 + k*N*16 + i*16 + j] * ptr[16 + M*N*16 + l*N*16 + i*16 + j]);
-					}
-					res2 += ptr2[M_*i*P + l*(M_) + k];
-				}
-				if (res != res2) {
-					check_t = false;
-					fprintf(f, "%d:%d @(%d, %d)\n", res, res2, k, l); 
-				}
-			}
-		}
-		fflush(f);
-		fclose(f);
-
-		if (check_t)
-			printf("\t<!MATCH!><!MATCH!><!MATCH!><!MATCH!><!MATCH!>\n");
-		else
-			printf("\t<!DIFER!><!DIFER!><!DIFER!><!DIFER!><!DIFER!>\n");
 
 		bool check = true;
 		printf("Check: ");
@@ -651,7 +654,8 @@ int matrixMulApp::run()
 						res += (ptr[16 + k*N*16 + i*16 + j] * ptr[16 + M*N*16 + l*N*16 + i*16 + j]);
 					}
 				}
-				res2 = ptr2[M_*N*P + l*(M_) + k];
+				//res2 = ptr2[M_*N*P + l*(M_) + k];
+				res2 = ptr2[l*(M_) + k];
 				if (res != res2) {
 					check = false;
 					fprintf(f, "%d:%d @(%d, %d)\n", res, res2, k, l); 

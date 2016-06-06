@@ -139,7 +139,7 @@ module write_buffer_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_WIDT
 			end
 
 
-			if ((wr_now && cacheOn) || ((offset_addr == 4'd15) && wr_en))
+			if ((wr_now && (cacheOn|| wr_en)) || ((offset_addr == 4'd15) && wr_en))
 			begin
 
 				wr_real <= 1'b1;

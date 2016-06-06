@@ -95,7 +95,8 @@ module afu_user_wb #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_WIDTH = 
 	);
 
 	//matrix_multiply #(
-	matrix_multiply_pl #(
+	//matrix_multiply_pl #(
+	matrix_multiply_buf_pl #(
 		.ADDR_LMT(ADDR_LMT),
 		.MDATA(MDATA), 
 		.CACHE_WIDTH(CACHE_WIDTH),
