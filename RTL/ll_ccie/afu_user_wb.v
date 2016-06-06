@@ -57,7 +57,8 @@ module afu_user_wb #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_WIDTH = 
 	//	.clk_o		(user_clk)
 	//);
 
-	write_buffer #(
+	//write_buffer #(
+	write_buffer_pl #(
 		.ADDR_LMT(ADDR_LMT),
 		.MDATA(MDATA), 
 		.CACHE_WIDTH(CACHE_WIDTH),
@@ -66,6 +67,7 @@ module afu_user_wb #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_WIDTH = 
 	wbuf(
 		.clk			(clk),
 		.rst			(rst),
+		//.start 			(start),
 
 		.wr_req_addr		(wr_req_addr),
 		.wr_req_mdata		(wr_req_mdata), 
@@ -88,9 +90,8 @@ module afu_user_wb #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_WIDTH = 
 		.wr_direct		(wb_req_direct),
 
 		.wr_valid		(wb_rsp_valid), 
-		.wr_real_valid		(wb_rsp_rvalid), 
+		.wr_real_valid		(wb_rsp_rvalid) 
 
-		.start 			(start)
 	);
 
 	//matrix_multiply #(

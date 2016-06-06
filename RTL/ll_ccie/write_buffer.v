@@ -46,8 +46,8 @@ module write_buffer #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_WIDTH =
 
 
 	wire [ADDR_LMT-1:0] cl_addr;
-	reg [3:0] offset_addr;
-	reg [DATA_WIDTH-1:0] index_addr;
+	wire [3:0] offset_addr;
+	wire [DATA_WIDTH-1:0] index_addr;
 
 	assign cl_addr = wr_addr[ADDR_LMT+3:4];
 	assign offset_addr = wr_addr[3:0];
@@ -76,12 +76,6 @@ module write_buffer #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_WIDTH =
 
 		r_wr_req_en 	<= rst?1'b0:n_wr_req_en; 
 		r_wr_valid	<= rst?1'b0:n_wr_valid; 
-
-		if (rst)
-		begin
-			buffer <= 'd0;
-		end
-
 	end
 
 	always@(*)
@@ -104,6 +98,7 @@ module write_buffer #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_WIDTH =
 					n_wr_req_en = 0;
 					n_wr_req_mdata = 0;
 					n_wr_req_data = 0;
+					buffer = 0;
 				end
 			end
 			STATE_WB_WR:

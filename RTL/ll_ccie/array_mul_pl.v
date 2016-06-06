@@ -39,7 +39,7 @@ module array_mul_pl #(CACHE_WIDTH = 512, DATA_WIDTH = 32)
 
 	//multiplier size 16
 	genvar i;
-	generate for(i=0; i<DATA_SIZE; i++)
+	generate for(i=0; i<DATA_SIZE; i=i+1)
 		begin:multiplier
 			always@(posedge clk)
 			begin
@@ -58,7 +58,7 @@ module array_mul_pl #(CACHE_WIDTH = 512, DATA_WIDTH = 32)
 
 	//adder_1 size 8
 	genvar j;
-	generate for (j=0; j<(DATA_SIZE>>1); j++)
+	generate for (j=0; j<(DATA_SIZE>>1); j=j+1)
 		begin:adder_1
 			always@(posedge clk)
 			begin
@@ -77,7 +77,7 @@ module array_mul_pl #(CACHE_WIDTH = 512, DATA_WIDTH = 32)
 
 	//adder_2 size 4
 	genvar k;
-	generate for (k=0; k<(DATA_SIZE>>2); k++)
+	generate for (k=0; k<(DATA_SIZE>>2); k=k+1)
 		begin:adder_2
 			always@(posedge clk)
 			begin
@@ -96,7 +96,7 @@ module array_mul_pl #(CACHE_WIDTH = 512, DATA_WIDTH = 32)
 
 	//adder_3 size 2
 	genvar l;
-	generate for (l=0; l<(DATA_SIZE>>3); l++)
+	generate for (l=0; l<(DATA_SIZE>>3); l=l+1)
 		begin:adder_3
 			always@(posedge clk)
 			begin

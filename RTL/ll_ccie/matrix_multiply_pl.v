@@ -72,7 +72,8 @@ module matrix_multiply_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_W
 	STATE_WAIT = 'd2,
 	STATE_RUN = 'd3,
 	STATE_ADDUP = 'd4,
-	STATE_FINISH = 'd5;
+	STATE_FINISH = 'd5,
+	STATE_NONE = 'd6;
 
 	reg [3:0] 		r_state, n_state;
 
@@ -84,26 +85,38 @@ module matrix_multiply_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_W
 	reg [DATA_WIDTH-1:0] perf_cnt;
 	reg [DATA_WIDTH-1:0] perf_start;
 
+	// Base address
+	reg [ADDR_LMT-1:0] addr_vec2;
+	reg [ADDR_LMT-1:0] addr_wr_base;
+
+
 	// INIT parameter
-	reg [DATA_WIDTH-1:0] M;
-	reg [DATA_WIDTH-1:0] N;
-	reg [DATA_WIDTH-1:0] P;
-	reg [DATA_WIDTH-1:0] MN;
-	reg [DATA_WIDTH-1:0] MP_;
-	reg [DATA_WIDTH-1:0] PN;
-	reg [DATA_WIDTH-1:0] MNP;
+	reg [CACHE_WIDTH-1:0] para, n_para;
+
+	wire [DATA_WIDTH-1:0] M;
+	wire [DATA_WIDTH-1:0] N;
+	wire [DATA_WIDTH-1:0] P;
+	wire [DATA_WIDTH-1:0] MN;
+	wire [DATA_WIDTH-1:0] M_P;
+	wire [DATA_WIDTH-1:0] PN;
+	wire [DATA_WIDTH-1:0] MNP;
+	assign M = para[31:0];
+	assign N = para[63:32];
+	assign P = para[95:64];
+	assign MN = M * N;
+	assign PN = P * N;
+	assign MNP = P * MN;
+	assign M_P = ((M + 15)>>4) * P;
+	assign addr_vec2 = addr_vec1 + MN;
+	assign addr_wr_base = ((MN + PN + 1)<<4);
 
 	// TEMP results
 	reg [CACHE_WIDTH-1:0] vec1;
 	reg [CACHE_WIDTH-1:0] vec2;
-	reg [DATA_WIDTH-1:0] res_mul;
+	wire [DATA_WIDTH-1:0] res_mul;
 
 	reg [CACHE_WIDTH-1:0] inc;
-	reg [CACHE_WIDTH-1:0] res_accu;
-
-	// Base address
-	reg [ADDR_LMT-1:0] addr_vec2;
-	reg [ADDR_LMT-1:0] addr_wr_base;
+	wire [CACHE_WIDTH-1:0] res_accu;
 
 	// Address index
 	reg [ADDR_LMT-1:0] vec1_idx;
@@ -127,14 +140,15 @@ module matrix_multiply_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_W
 	reg [ADDR_LMT+3:0] finish_cnt;
 	reg [DATA_SIZE-1:0] accu_finish_cnt;
 
-	// Control Singals
+	// Control Signals
 	reg rd_req_f;
 	reg accu_rd_req_f;
 	reg vec1_select;
 	reg ready_vec;
-	reg ready_mul;
 	reg ready_inc;
-	reg ready_accu;
+	reg ready_add;
+	wire ready_mul;
+	wire ready_accu;
 
 	array_accu_pl #(
 		.CACHE_WIDTH (CACHE_WIDTH),
@@ -143,6 +157,7 @@ module matrix_multiply_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_W
 	accuer (
 		.clk (clk),
 		.rst (rst),
+		.out (ready_add),
 		.inc (ready_inc),
 		.array (inc),
 		.res	(res_accu),
@@ -163,7 +178,7 @@ module matrix_multiply_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_W
 		.ready	(ready_mul)
 	);
 
-	// Read address update
+	// Read request 
 	always@(posedge clk)
 	begin
 		if (run && !rd_req_almostfull && !rd_req_f)
@@ -171,12 +186,12 @@ module matrix_multiply_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_W
 			if (vec1_select)
 			begin
 				r_rd_req_addr <= addr_vec1 + vec1_idx + rd_offset;
-				$display("Read: %d", addr_vec1 + vec1_idx + rd_offset);
+				$display("Read Vec1: %d", addr_vec1 + vec1_idx + rd_offset);
 			end
 			else
 			begin
 				r_rd_req_addr <= addr_vec2 + vec2_idx + rd_offset;
-				$display("Read: %d", addr_vec2 + vec2_idx + rd_offset);
+				$display("Read Vec2: %d", addr_vec2 + vec2_idx + rd_offset);
 			end
 
 			r_rd_req_mdata <= 'd0;
@@ -192,6 +207,7 @@ module matrix_multiply_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_W
 					if (rd_offset >= N-1)
 					begin
 						rd_req_f <= 1'b1;
+						$display("READ FINISH");
 					end
 					else
 					begin
@@ -202,23 +218,6 @@ module matrix_multiply_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_W
 				begin
 					vec2_idx <= vec2_idx + N;
 				end
-				//if (rd_offset >= N-1)
-				//begin
-				//	rd_offset <= 'd0;
-				//	if (vec2_idx >= (PN - N)) 
-				//	begin
-				//		rd_req_f <= 1'b1;
-				//	end
-				//	else
-				//	begin
-				//		vec2_idx <= vec2_idx + N;
-				//	end
-
-				//end
-				//else
-				//begin
-				//	rd_offset <= rd_offset + 1;
-				//end
 			end
 			else 
 			begin
@@ -232,15 +231,15 @@ module matrix_multiply_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_W
 		else if (accu_run && !rd_req_almostfull && !accu_rd_req_f)
 		begin
 			r_rd_req_addr <= (addr_wr_base>>4) + accu_idx + accu_offset;
-			$display("CL num: %d", (MP_));
+			$display("CL num: %d", (M_P));
 			$display("Read: %d", addr_wr_base + accu_idx + accu_offset);
 			r_rd_req_mdata <= 'd0;
 			r_rd_req_en <= 1'b1;
 
-			if (accu_idx >= (MP_)*N - (MP_))
+			if (accu_idx >= (M_P)*N - (M_P))
 			begin
 				accu_idx <= 'd0;
-				if (accu_offset >= ((MP_)-1))
+				if (accu_offset >= ((M_P)-1))
 				begin
 					accu_rd_req_f <= 1'b1;
 				end
@@ -251,11 +250,15 @@ module matrix_multiply_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_W
 			end
 			else
 			begin
-				accu_idx <= accu_idx + (MP_);
+				accu_idx <= accu_idx + (M_P);
 			end
 		end
 		else
 		begin
+			if (rd_req_almostfull)
+			begin
+				$display("[WARN] READ FULL!!!");
+			end
 			if (rst)
 			begin
 				rd_req_f <= 1'b0;
@@ -264,7 +267,6 @@ module matrix_multiply_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_W
 
 				accu_idx <= 'd0;
 				accu_offset <= 'd0;
-				rd_cnt <= 'd0;
 				vec1_idx <= 'd0;
 				vec2_idx <= 'd0;
 				rd_offset <= 'd0;
@@ -307,21 +309,18 @@ module matrix_multiply_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_W
 		else if (accu_run && rd_rsp_valid)
 		begin
 			$display("Readed: %d %d %d %d ... %d %d", rd_rsp_data[31:0], rd_rsp_data[63:32], rd_rsp_data[95:64], rd_rsp_data[127:96], rd_rsp_data[479:448], rd_rsp_data[511:480]);
+
 			inc <= rd_rsp_data;
-			if (accu_rd_cnt == 0)
-			begin
-				ready_inc <= 1'b0;
-			end
-			else
-			begin
-				ready_inc <= 1'b1;
-			end
+			ready_inc <= 1'b1;
+
 			if (accu_rd_cnt == N-1)
 			begin
 				accu_rd_cnt <= 'd0;
+				ready_add <= 1'b1;
 			end
 			else
 			begin
+				ready_add <= 1'b0;
 				accu_rd_cnt <= accu_rd_cnt + 1;
 			end
 
@@ -329,6 +328,7 @@ module matrix_multiply_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_W
 		else 
 		begin
 			ready_inc <= 1'b0;
+			ready_add <= 1'b0;
 			ready_vec <= 1'b0;
 			if (rst)
 			begin
@@ -350,7 +350,7 @@ module matrix_multiply_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_W
 			r_wr_req_direct <= 1'b0;
 			r_wr_req_mdata <= 'd0;
 
-			if (wr_cnt >= M*P - 1)
+			if (wr_cnt >= M - 1)
 			begin
 				r_wr_req_now <= 1'b1;
 				wr_cnt <= 'd0;
@@ -374,8 +374,8 @@ module matrix_multiply_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_W
 		end
 		else if (accu_run && !wr_req_almostfull && ready_accu)
 		begin
-			$display("Write: %d %d %d %d ... %d %d@%d", res_accu[31:0], res_accu[63:32], res_accu[95:64], res_accu[127:96], res_accu[479:448], res_accu[511:480], accu_wr_idx + addr_wr_base);
-			r_wr_req_addr <= accu_wr_idx + addr_wr_base;
+			$display("Write: %d %d %d %d ... %d %d@%d", res_accu[31:0], res_accu[63:32], res_accu[95:64], res_accu[127:96], res_accu[479:448], res_accu[511:480], accu_wr_idx + addr_wr_base + ((M_P * N)<<4));
+			r_wr_req_addr <= accu_wr_idx + addr_wr_base + ((M_P * N)<<4);
 			r_wr_req_data <= res_accu;
 			r_wr_req_direct <= 1'b1;
 			r_wr_req_en <= 1'b0;
@@ -386,6 +386,11 @@ module matrix_multiply_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_W
 		end
 		else
 		begin
+			if (wr_req_almostfull)
+			begin
+				$display("[ERROR] WRITE FULL!!!");
+			end
+
 			r_wr_req_en <= 1'b0;
 			r_wr_req_direct <= 1'b0;
 			r_wr_req_mdata <= 'd0;
@@ -445,6 +450,8 @@ module matrix_multiply_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_W
 	always@(posedge clk)
 	begin
 		r_state <= rst ? 'd0 : n_state;
+		para <= rst ? 'd0 : n_para;
+
 		r_done <= rst ? 1'b0 : n_done;   
 	end
 
@@ -453,6 +460,10 @@ module matrix_multiply_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_W
 	begin
 		n_state = r_state;
 		n_done = r_done;
+		n_para = para;
+
+		n_rd_req_addr = 'd0;
+		n_rd_req_mdata = 'd0;
 		n_rd_req_en = 1'b0;
 
 		case(r_state)
@@ -476,26 +487,16 @@ module matrix_multiply_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_W
 				$display("INIT");
 				if (rd_rsp_valid)
 				begin
-					M = rd_rsp_data[31:0];
-					N = rd_rsp_data[63:32];
-					P = rd_rsp_data[95:64];
-					MN = M * N;
-					MP_ = (P * M + 15)>>4;
-					PN = P * N;
-					MNP = M * N * P;
-					$display("M: %d", M);
-					$display("N: %d", N);
-					$display("P: %d", P);
-
-					addr_vec2 = addr_vec1 + MN;
-					addr_wr_base = ((MN + PN + 1)<<4);
-
+					n_para = rd_rsp_data;
 					n_state = STATE_WAIT;
 				end
 			end
 			STATE_WAIT:
 			begin
 				$display("WAIT");
+				$display("M: %d", M);
+				$display("N: %d", N);
+				$display("P: %d", P);
 				n_state = STATE_RUN;
 			end
 			STATE_RUN:
@@ -510,7 +511,7 @@ module matrix_multiply_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_W
 			STATE_ADDUP:
 			begin
 				$display("ADDUP");
-				if (accu_finish_cnt >= (MP_))
+				if (accu_finish_cnt >= (M_P))
 				begin
 					$display("Finish %d >= %d", finish_cnt, MN*P);
 					n_state = STATE_FINISH;

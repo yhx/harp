@@ -243,12 +243,12 @@ IRuntime * RuntimeClient::getRuntime()
 ///          The Service Client contains the application logic.
 ///
 /// When we request an AFU (Service) from AAL, the request will be fulfilled by calling into this interface.
-class llApp: public CAASBase, public IServiceClient, public ISPLClient
+class matrixMulApp: public CAASBase, public IServiceClient, public ISPLClient
 {
 	public:
 
-		llApp(RuntimeClient * rtc);
-		~llApp();
+		matrixMulApp(RuntimeClient * rtc);
+		~matrixMulApp();
 
 		btInt  run();
 
@@ -306,7 +306,7 @@ class llApp: public CAASBase, public IServiceClient, public ISPLClient
 ///  Implementation
 ///
 ///////////////////////////////////////////////////////////////////////////////
-llApp::llApp(RuntimeClient *rtc) :
+matrixMulApp::matrixMulApp(RuntimeClient *rtc) :
 	m_pAALService(NULL),
 	m_runtimClient(rtc),
 	m_SPLService(NULL),
@@ -322,7 +322,7 @@ llApp::llApp(RuntimeClient *rtc) :
 	m_Sem.Create(0, 1);
 }
 
-llApp::~llApp()
+matrixMulApp::~matrixMulApp()
 {
 	m_Sem.Destroy();
 }
@@ -337,7 +337,7 @@ typedef struct list {
 } __attribute__((__packed__)) list_t;
 
 
-int llApp::run()
+int matrixMulApp::run()
 {
 	cout <<"======================="<<endl;
 	cout <<"= Linked List Example ="<<endl;
@@ -437,7 +437,9 @@ int llApp::run()
 
 		int *ptr = (int*)pSource;
 		//INIT
-		const int M = 2, N = 3, P = 2;
+		FILE *f = NULL;
+		const int M = 200, N = 15, P = 10;
+		const int M_ = ((M+15)>>4)<<4;
 		ptr[0] = M;
 		ptr[1] = N;
 		ptr[2] = P;
@@ -450,9 +452,9 @@ int llApp::run()
 					//printf("%d@%d ", count_r, 16+k*N*16+i*16+j);
 					count_r++;
 				}
-				printf(" \t ");
+				//printf(" \t ");
 			}
-			printf("\n");
+			//printf("\n");
 		}
 
 		for (uint32_t k=0; k<P; k++) {
@@ -462,22 +464,29 @@ int llApp::run()
 					//printf("%d@%d ", count_r, 16+M*N*16+k*N*16+i*16+j);
 					count_r--;
 		 		}
-				printf(" \t ");
+				//printf(" \t ");
 			}
-			printf("\n");
+			//printf("\n");
 		}
 
+		f = fopen("Mat1.txt", "w+");
 		for (uint32_t k=0; k<M; k++) {
 			for(uint32_t i = 0; i < N; i++) {
-				for (uint32_t j=0; j<16; j++) {
+		 		for (uint32_t j=0; j<16; j++) {
 					printf("%d ", ptr[16 + k*N*16 + i*16 + j]);
+					fprintf(f, "%d ", ptr[16 + k*N*16 + i*16 + j]);
 				 	//printf("%d@%d ", ptr[16 + k*N*16 + i*16 + j], 16+k*N*16+i*16+j);
 				}
 				printf(" \t ");
+				fprintf(f, " \t ");
 			}
 			printf("\n");
+			fprintf(f, "\n");
 		}
+		fflush(f);
+		fclose(f);
 
+		f = fopen("Mat2.txt", "w+");
 		for (uint32_t k=0; k<P; k++) {
 			for(uint32_t i = 0; i < N; i++) {
 				for (uint32_t j=0; j<16; j++) {
@@ -488,7 +497,34 @@ int llApp::run()
 			}
 			printf("\n");
 		}
+		fflush(f);
+		fclose(f);
 
+		f = fopen("Parameter.txt", "w+");
+		printf("M=%d, N=%d, P=%d\n", M, N, P);
+		fprintf(f, "M=%d, N=%d, P=%d\n", M, N, P);
+		fflush(f);
+		fclose(f);
+
+		f = fopen("Software.txt", "w+");
+		printf("Software: ");
+		for (uint32_t l=0; l<P; l++) {
+			printf("\t");
+			for(uint32_t k =0; k<M; k++) {
+				int res = 0;
+				for(uint32_t i = 0; i < N; i++) {
+					for (uint32_t j=0; j<16; j++) {
+						res += (ptr[16 + k*N*16 + i*16 + j] * ptr[16 + M*N*16 + l*N*16 + i*16 + j]);
+					}
+				}
+				printf("%d ", res); 
+				fprintf(f, "%d ", res); 
+			}
+			printf("\n");
+			fprintf(f, "\n");
+		}
+		fflush(f);
+		fclose(f);
 
 		// Buffers have been initialized
 		////////////////////////////////////////////////////////////////////////////
@@ -528,8 +564,10 @@ int llApp::run()
 
 		/* change pointer to write region space */
 
-		printf("Src: ");
+		printf("M=%d, N=%d, P=%d\n", M, N, P);
+		printf("Software: ");
 		for (uint32_t l=0; l<P; l++) {
+			printf("\t");
 			for(uint32_t k =0; k<M; k++) {
 				int res = 0;
 				for(uint32_t i = 0; i < N; i++) {
@@ -543,23 +581,67 @@ int llApp::run()
 		}
 
 		int *ptr2 = (int*)(ptr + 16*(1 + N*M + N*P));
-		printf("Dst1: ");
-		for (int i=0; i< M*P; i++)
-			printf("%d ", ptr2[i]);
-		printf("\n");
 
-		printf("Dst2: ");
-		for (uint32_t i=0; i<N; i++) {
+		f = fopen("TEMP_RES.txt", "w+");
+		printf("TEMP RES: ");
+		for(uint32_t i=0; i<N; i++) {
 			for(uint32_t l=0; l<P; l++) {
+				printf("\t");
 				for(uint32_t k =0; k<M; k++) {
-					printf("%d ", ptr2[k + l * M + i*(((M*P+15)>>4)<<4)]); 
+					printf("%d ", ptr2[i *P *(M_) + l * (M_) + k]); 
+					fprintf(f, "%d ", ptr2[i *P *(M_) + l * (M_) + k]); 
 				}
 			}
 			printf("\n");
+			fprintf(f, "\n");
 		}
+		fflush(f);
+		fclose(f);
+
+		printf("Hardware: ");
+		f = fopen("Hardware.txt", "w+");
+		for(uint32_t l=0; l<P; l++) {
+			printf("\t");
+			for(uint32_t k =0; k<M; k++) {
+				printf("%d ", ptr2[M_*N*P + l * (M_) + k]); 
+				fprintf(f, "%d ", ptr2[M_*N*P + l * (M_) + k]); 
+			}
+			fprintf(f, "\n");
+			printf("\n");
+		}
+		fflush(f);
+		fclose(f);
+
+		bool check_t = true;
+		printf("Check TEMP: ");
+		f = fopen("CHECK_TMP.txt", "w+");
+		for (uint32_t l=0; l<P; l++) {
+			for(uint32_t k =0; k<M; k++) {
+				int res = 0;
+				int res2 = 0;
+				for(uint32_t i = 0; i < N; i++) {
+					for (uint32_t j=0; j<16; j++) {
+						res += (ptr[16 + k*N*16 + i*16 + j] * ptr[16 + M*N*16 + l*N*16 + i*16 + j]);
+					}
+					res2 += ptr2[M_*i*P + l*(M_) + k];
+				}
+				if (res != res2) {
+					check_t = false;
+					fprintf(f, "%d:%d @(%d, %d)\n", res, res2, k, l); 
+				}
+			}
+		}
+		fflush(f);
+		fclose(f);
+
+		if (check_t)
+			printf("\t<!MATCH!><!MATCH!><!MATCH!><!MATCH!><!MATCH!>\n");
+		else
+			printf("\t<!DIFER!><!DIFER!><!DIFER!><!DIFER!><!DIFER!>\n");
 
 		bool check = true;
 		printf("Check: ");
+		f = fopen("CHECK_RES.txt", "w+");
 		for (uint32_t l=0; l<P; l++) {
 			for(uint32_t k =0; k<M; k++) {
 				int res = 0;
@@ -569,13 +651,16 @@ int llApp::run()
 						res += (ptr[16 + k*N*16 + i*16 + j] * ptr[16 + M*N*16 + l*N*16 + i*16 + j]);
 					}
 				}
-				res2 = ptr2[l*M + k];
-				if (res != ptr2[l*M + k]) {
+				res2 = ptr2[M_*N*P + l*(M_) + k];
+				if (res != res2) {
 					check = false;
-					printf("%d:%d\n", res, res2); 
+					fprintf(f, "%d:%d @(%d, %d)\n", res, res2, k, l); 
 				}
 			}
 		}
+		fflush(f);
+		fclose(f);
+
 		//for (uint32_t l=0; l<P; l++) {
 		//	for(uint32_t k =0; k<M; k++) {
 		//		int res = 0;
@@ -592,12 +677,11 @@ int llApp::run()
 		//			printf("%d:%d\n", res, res2); 
 		//		}
 		//	}
-		//}
 
 		if (check)
-			printf("<!RIGHT!><!RIGHT!><!RIGHT!><!RIGHT!><!RIGHT!>\n");
+			printf("\t<!RIGHT!><!RIGHT!><!RIGHT!><!RIGHT!><!RIGHT!>\n");
 		else
-			printf("<!WRONG!><!WRONG!><!WRONG!><!WRONG!><!WRONG!>\n");
+			printf("\t<!WRONG!><!WRONG!><!WRONG!><!WRONG!><!WRONG!>\n");
 
 		// Issue Stop Transaction and wait for OnTransactionStopped
 		MSG("Stopping SPL Transaction");
@@ -619,7 +703,7 @@ int llApp::run()
 // We must implement the IServiceClient interface (IServiceClient.h):
 
 // <begin IServiceClient interface>
-void llApp::serviceAllocated(IBase *pServiceBase,
+void matrixMulApp::serviceAllocated(IBase *pServiceBase,
 		TransactionID const &rTranID)
 {
 	m_pAALService = pServiceBase;
@@ -636,11 +720,11 @@ void llApp::serviceAllocated(IBase *pServiceBase,
 	MSG("Service Allocated");
 
 	// Allocate Workspaces needed.
-	m_SPLService->WorkspaceAllocate(sizeof(VAFU2_CNTXT) + MB(4) + MB(4), TransactionID());
+	m_SPLService->WorkspaceAllocate(sizeof(VAFU2_CNTXT) + MB(64) + MB(64), TransactionID());
 
 }
 
-void llApp::serviceAllocateFailed(const IEvent &rEvent)
+void matrixMulApp::serviceAllocateFailed(const IEvent &rEvent)
 {
 	IExceptionTransactionEvent * pExEvent = dynamic_ptr<IExceptionTransactionEvent>(iidExTranEvent, rEvent);
 	ERR("Failed to allocate a Service");
@@ -649,7 +733,7 @@ void llApp::serviceAllocateFailed(const IEvent &rEvent)
 	m_Sem.Post(1);
 }
 
-void llApp::serviceFreed(TransactionID const &rTranID)
+void matrixMulApp::serviceFreed(TransactionID const &rTranID)
 {
 	MSG("Service Freed");
 	// Unblock Main()
@@ -657,7 +741,7 @@ void llApp::serviceFreed(TransactionID const &rTranID)
 }
 
 // <ISPLClient>
-void llApp::OnWorkspaceAllocated(TransactionID const &TranID,
+void matrixMulApp::OnWorkspaceAllocated(TransactionID const &TranID,
 		btVirtAddr WkspcVirt,
 		btPhysAddr WkspcPhys,
 		btWSSize WkspcSize)
@@ -671,7 +755,7 @@ void llApp::OnWorkspaceAllocated(TransactionID const &TranID,
 	m_Sem.Post(1);
 }
 
-void llApp::OnWorkspaceAllocateFailed(const IEvent &rEvent)
+void matrixMulApp::OnWorkspaceAllocateFailed(const IEvent &rEvent)
 {
 	IExceptionTransactionEvent * pExEvent = dynamic_ptr<IExceptionTransactionEvent>(iidExTranEvent, rEvent);
 	ERR("OnWorkspaceAllocateFailed");
@@ -680,14 +764,14 @@ void llApp::OnWorkspaceAllocateFailed(const IEvent &rEvent)
 	m_Sem.Post(1);
 }
 
-void llApp::OnWorkspaceFreed(TransactionID const &TranID)
+void matrixMulApp::OnWorkspaceFreed(TransactionID const &TranID)
 {
 	ERR("OnWorkspaceFreed");
 	// Freed so now Release() the Service through the Services IAALService::Release() method
 	(dynamic_ptr<IAALService>(iidService, m_pAALService))->Release(TransactionID());
 }
 
-void llApp::OnWorkspaceFreeFailed(const IEvent &rEvent)
+void matrixMulApp::OnWorkspaceFreeFailed(const IEvent &rEvent)
 {
 	IExceptionTransactionEvent * pExEvent = dynamic_ptr<IExceptionTransactionEvent>(iidExTranEvent, rEvent);
 	ERR("OnWorkspaceAllocateFailed");
@@ -697,7 +781,7 @@ void llApp::OnWorkspaceFreeFailed(const IEvent &rEvent)
 }
 
 /// CMyApp Client implementation of ISPLClient::OnTransactionStarted
-void llApp::OnTransactionStarted( TransactionID const &TranID,
+void matrixMulApp::OnTransactionStarted( TransactionID const &TranID,
 		btVirtAddr           AFUDSMVirt,
 		btWSSize             AFUDSMSize)
 {
@@ -707,13 +791,13 @@ void llApp::OnTransactionStarted( TransactionID const &TranID,
 	m_Sem.Post(1);
 }
 /// CMyApp Client implementation of ISPLClient::OnContextWorkspaceSet
-void llApp::OnContextWorkspaceSet( TransactionID const &TranID)
+void matrixMulApp::OnContextWorkspaceSet( TransactionID const &TranID)
 {
 	MSG("Context Set");
 	m_Sem.Post(1);
 }
 /// CMyApp Client implementation of ISPLClient::OnTransactionFailed
-void llApp::OnTransactionFailed( const IEvent &rEvent)
+void matrixMulApp::OnTransactionFailed( const IEvent &rEvent)
 {
 	IExceptionTransactionEvent * pExEvent = dynamic_ptr<IExceptionTransactionEvent>(iidExTranEvent, rEvent);
 	MSG("Runtime AllocateService failed");
@@ -726,7 +810,7 @@ void llApp::OnTransactionFailed( const IEvent &rEvent)
 	m_Sem.Post(1);
 }
 /// CMyApp Client implementation of ISPLClient::OnTransactionComplete
-void llApp::OnTransactionComplete( TransactionID const &TranID)
+void matrixMulApp::OnTransactionComplete( TransactionID const &TranID)
 {
 	m_AFUDSMVirt = NULL;
 	m_AFUDSMSize =  0;
@@ -734,7 +818,7 @@ void llApp::OnTransactionComplete( TransactionID const &TranID)
 	m_Sem.Post(1);
 }
 /// CMyApp Client implementation of ISPLClient::OnTransactionStopped
-void llApp::OnTransactionStopped( TransactionID const &TranID)
+void matrixMulApp::OnTransactionStopped( TransactionID const &TranID)
 {
 	m_AFUDSMVirt = NULL;
 	m_AFUDSMSize =  0;
@@ -742,7 +826,7 @@ void llApp::OnTransactionStopped( TransactionID const &TranID)
 	m_Sem.Post(1);
 }
 
-void llApp::serviceEvent(const IEvent &rEvent)
+void matrixMulApp::serviceEvent(const IEvent &rEvent)
 {
 	ERR("unexpected event 0x" << hex << rEvent.SubClassID());
 }
@@ -762,7 +846,7 @@ void llApp::serviceEvent(const IEvent &rEvent)
 int main(int argc, char *argv[])
 {
 	RuntimeClient  runtimeClient;
-	llApp theApp(&runtimeClient);
+	matrixMulApp theApp(&runtimeClient);
 
 	if(!runtimeClient.isOK()){
 		ERR("Runtime Failed to Start");

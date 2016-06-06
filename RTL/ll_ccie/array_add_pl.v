@@ -24,7 +24,7 @@ module array_add_pl #(CACHE_WIDTH = 512, DATA_WIDTH = 32)
 	end
 
 	genvar i;
-	generate for (i=0; i<DATA_SIZE; i++)
+	generate for (i=0; i<DATA_SIZE; i=i+1)
 		begin:adder
 			always@(posedge clk)
 			begin

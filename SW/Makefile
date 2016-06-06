@@ -62,15 +62,15 @@ LDFLAGS  += -L$(DESTDIR)$(prefix)/lib -Wl,-rpath-link -Wl,$(prefix)/lib -Wl,-rpa
             -L$(DESTDIR)$(prefix)/lib64 -Wl,-rpath-link -Wl,$(prefix)/lib64 -Wl,-rpath -Wl,$(DESTDIR)$(prefix)/lib64
 endif
 
-all: LlApp
+all: matrix_mul
 
-LlApp: LlApp.o
-	$(CXX) -g -O2 -o LlApp LlApp.o $(LDFLAGS) -lOSAL -lAAS -lxlrt
+matrix_mul: matrix_mul.o
+	$(CXX) -g -O2 -o $@ $< $(LDFLAGS) -lOSAL -lAAS -lxlrt
 
-LlApp.o: LlApp.cpp Makefile
-	$(CXX) $(CPPFLAGS) -D__AAL_USER__=1  -g -O2 -c -o LlApp.o LlApp.cpp
+%.o: %.cpp Makefile
+	$(CXX) $(CPPFLAGS) -D__AAL_USER__=1  -g -O2 -c -o $@ $<
 
 clean:
-	$(RM) LlApp.o LlApp
+	$(RM) matrix_mul.o matrix_mul
 
 .PHONY:all clean
