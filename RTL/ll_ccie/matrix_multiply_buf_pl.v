@@ -78,35 +78,32 @@ module matrix_multiply_buf_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DA
 
 	reg [3:0] 		r_state, n_state;
 
-	wire 			run, accu_run;
+	wire 			run;
 	assign run = (r_state == STATE_RUN) && (!r_done);
-	assign accu_run = (r_state == STATE_ADDUP) && (!r_done);
 
 	//Perf manage
 	reg [DATA_WIDTH-1:0] perf_cnt;
 	reg [DATA_WIDTH-1:0] perf_start;
 
 	// Base address
-	reg [ADDR_LMT-1:0] addr_vec2;
-	reg [ADDR_LMT-1:0] addr_wr_base;
+	wire [ADDR_LMT-1:0] addr_vec2;
+	wire [ADDR_LMT-1:0] addr_wr_base;
 
 
 	// INIT parameter
 	reg [CACHE_WIDTH-1:0] para, n_para;
 
-	wire [DATA_WIDTH-1:0] M;
-	wire [DATA_WIDTH-1:0] N;
-	wire [DATA_WIDTH-1:0] P;
-	wire [DATA_WIDTH-1:0] MN;
-	wire [DATA_WIDTH-1:0] MP;
-	wire [DATA_WIDTH-1:0] PN;
-	wire [DATA_WIDTH-1:0] BN;
-	assign M = para[31:0];
-	assign N = para[63:32];
-	assign P = para[95:64];
+	wire [ADDR_LMT-1:0] M;
+	wire [ADDR_LMT-1:0] N;
+	wire [ADDR_LMT-1:0] P;
+	wire [ADDR_LMT-1:0] MN;
+	wire [ADDR_LMT-1:0] MP;
+	wire [ADDR_LMT-1:0] PN;
+	assign M = para[ADDR_LMT-1:0];
+	assign N = para[DATA_WIDTH + ADDR_LMT-1:DATA_WIDTH];
+	assign P = para[DATA_WIDTH + DATA_WIDTH + ADDR_LMT-1: DATA_WIDTH+DATA_WIDTH];
 	assign MN = M * N;
 	assign PN = P * N;
-	assign BN = RAM_DEPTH/N;
 	assign MP = M * P;
 	assign addr_vec2 = addr_vec1 + MN;
 	assign addr_wr_base = ((MN + PN + 1)<<4);
@@ -152,7 +149,7 @@ module matrix_multiply_buf_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DA
 	accuer (
 		.clk (clk),
 		.rst (rst),
-		.size_out (N),
+		.size_out ({12'd0, N}),
 		.inc (ready_mul),
 		.array (res_mul),
 		.res	(res_accu),

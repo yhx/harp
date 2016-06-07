@@ -438,7 +438,7 @@ int matrixMulApp::run()
 		int *ptr = (int*)pSource;
 		//INIT
 		FILE *f = NULL;
-		const int M = 240, N = 15, P = 5;
+		const int M = 24, N = 2, P = 15;
 		const int M_ = ((M+15)>>4)<<4;
 		ptr[0] = M;
 		ptr[1] = N;

@@ -109,7 +109,7 @@ module write_buffer_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DATA_WIDT
 
 			buffer[index_addr +: 32] <= wr_en ? wr_data[31:0] : buffer[index_addr +: 32];
 			cur_addr <= wr_en ? cl_addr : cur_addr;
-			buf_mdata <= wr_en ? wr_mdata : 'd0;
+			buf_mdata <= wr_en ? wr_mdata : 14'd0;
 
 			if (wr_real)
 			begin
