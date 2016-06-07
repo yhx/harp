@@ -354,18 +354,32 @@ module matrix_multiply_buf_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DA
 			r_wr_req_direct <= 1'b0;
 			r_wr_req_mdata <= 'd0;
 
-			if (wr_cnt >= M - 1)
+
+			//TODO delete this
+			if (wr_idx >= MN*P - 1)
 			begin
 				r_wr_req_now <= 1'b1;
-				wr_cnt <= 'd0;
-				wr_idx <= ((wr_idx>>4) + 24'd1)<<4;
+				wr_idx <= wr_idx;
 			end
 			else
 			begin
 				wr_idx <= wr_idx + 24'd1;
 				r_wr_req_now <= 1'b0;
-				wr_cnt <= wr_cnt + 1;
 			end
+
+			//TODO uncomment this
+			//if (wr_cnt >= M - 1)
+			//begin
+			//	r_wr_req_now <= 1'b1;
+			//	wr_cnt <= 'd0;
+			//	wr_idx <= ((wr_idx>>4) + 24'd1)<<4;
+			//end
+			//else
+			//begin
+			//	wr_idx <= wr_idx + 24'd1;
+			//	r_wr_req_now <= 1'b0;
+			//	wr_cnt <= wr_cnt + 1;
+			//end
 		end
 		else
 		begin
@@ -472,7 +486,8 @@ module matrix_multiply_buf_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DA
 			STATE_RUN:
 			begin
 				$display("RUN");
-				if (finish_cnt >= MP)
+				//TODO: change MNP to MP
+				if (finish_cnt >= MN*P)
 				begin
 					$display("Finish %d >= %d", finish_cnt, MN*P);
 					n_state = STATE_ADDUP;

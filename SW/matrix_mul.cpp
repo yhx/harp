@@ -438,8 +438,8 @@ int matrixMulApp::run()
 		int *ptr = (int*)pSource;
 		//INIT
 		FILE *f = NULL;
-		const int M = 24, N = 2, P = 15;
-		const int M_ = ((M+15)>>4)<<4;
+		int M = 1, N = 4, P = 1;
+		int M_ = ((M+15)>>4)<<4;
 		ptr[0] = M;
 		ptr[1] = N;
 		ptr[2] = P;
@@ -463,7 +463,7 @@ int matrixMulApp::run()
 					ptr[16 + M*N*16 + k*N*16 + i*16 + j] = count_r;
 					//printf("%d@%d ", count_r, 16+M*N*16+k*N*16+i*16+j);
 					count_r--;
-		 		}
+				}
 				//printf(" \t ");
 			}
 			//printf("\n");
@@ -472,10 +472,10 @@ int matrixMulApp::run()
 		f = fopen("Mat1.txt", "w+");
 		for (uint32_t k=0; k<M; k++) {
 			for(uint32_t i = 0; i < N; i++) {
-		 		for (uint32_t j=0; j<16; j++) {
+				for (uint32_t j=0; j<16; j++) {
 					printf("%d ", ptr[16 + k*N*16 + i*16 + j]);
 					fprintf(f, "%d ", ptr[16 + k*N*16 + i*16 + j]);
-				 	//printf("%d@%d ", ptr[16 + k*N*16 + i*16 + j], 16+k*N*16+i*16+j);
+					//printf("%d@%d ", ptr[16 + k*N*16 + i*16 + j], 16+k*N*16+i*16+j);
 				}
 				printf(" \t ");
 				fprintf(f, " \t ");
@@ -516,8 +516,10 @@ int matrixMulApp::run()
 					for (uint32_t j=0; j<16; j++) {
 						res += (ptr[16 + k*N*16 + i*16 + j] * ptr[16 + M*N*16 + l*N*16 + i*16 + j]);
 					}
+					//TODO move this line out
+					printf("%d ", res); 
 				}
-				printf("%d ", res); 
+				//printf("%d ", res); 
 				fprintf(f, "%d ", res); 
 			}
 			printf("\n");
@@ -564,76 +566,23 @@ int matrixMulApp::run()
 
 		/* change pointer to write region space */
 
-		printf("M=%d, N=%d, P=%d\n", M, N, P);
-		printf("Software: ");
-		for (uint32_t l=0; l<P; l++) {
-			printf("\t");
-			for(uint32_t k =0; k<M; k++) {
-				int res = 0;
-				for(uint32_t i = 0; i < N; i++) {
-					for (uint32_t j=0; j<16; j++) {
-						res += (ptr[16 + k*N*16 + i*16 + j] * ptr[16 + M*N*16 + l*N*16 + i*16 + j]);
-					}
-				}
-				printf("%d ", res); 
-			}
-			printf("\n");
-		}
-
 		int *ptr2 = (int*)(ptr + 16*(1 + N*M + N*P));
-
-		//f = fopen("TEMP_RES.txt", "w+");
-		//printf("TEMP RES: ");
-		//for(uint32_t i=0; i<N; i++) {
-		//	for(uint32_t l=0; l<P; l++) {
-		//		printf("\t");
-		//		for(uint32_t k =0; k<M; k++) {
-		//			printf("%d ", ptr2[i *P *(M_) + l * (M_) + k]); 
-		//			fprintf(f, "%d ", ptr2[i *P *(M_) + l * (M_) + k]); 
-		//		}
-		//	}
-		//	printf("\n");
-		//	fprintf(f, "\n");
-		//}
-		//fflush(f);
-		//fclose(f);
-		
-		//bool check_t = true;
-		//printf("Check TEMP: ");
-		//f = fopen("CHECK_TMP.txt", "w+");
-		//for (uint32_t l=0; l<P; l++) {
-		//	for(uint32_t k =0; k<M; k++) {
-		//		int res = 0;
-		//		int res2 = 0;
-		//		for(uint32_t i = 0; i < N; i++) {
-		//			for (uint32_t j=0; j<16; j++) {
-		//				res += (ptr[16 + k*N*16 + i*16 + j] * ptr[16 + M*N*16 + l*N*16 + i*16 + j]);
-		//			}
-		//			res2 += ptr2[M_*i*P + l*(M_) + k];
-		//		}
-		//		if (res != res2) {
-		//			check_t = false;
-		//			fprintf(f, "%d:%d @(%d, %d)\n", res, res2, k, l); 
-		//		}
-		//	}
-		//}
-		//fflush(f);
-		//fclose(f);
-
-		//if (check_t)
-		//	printf("\t<!MATCH!><!MATCH!><!MATCH!><!MATCH!><!MATCH!>\n");
-		//else
-		//	printf("\t<!DIFER!><!DIFER!><!DIFER!><!DIFER!><!DIFER!>\n");
 
 		printf("Hardware: ");
 		f = fopen("Hardware.txt", "w+");
 		for(uint32_t l=0; l<P; l++) {
 			printf("\t");
 			for(uint32_t k =0; k<M; k++) {
+				//TODO comment this cycle
+				for (uint32_t i=0; i<N; i++)
+				{
+					int t = ptr2[l * (M) * N + k * N + i];
+					printf("%d ", t); 
+				}
 				//int t = ptr2[M_*N*P + l * (M_) + k];
-				int t = ptr2[l * (M_) + k];
-				printf("%d ", t); 
-				fprintf(f, "%d ", t); 
+				//int t = ptr2[l * (M_) + k];
+				//printf("%d ", t); 
+				//fprintf(f, "%d ", t); 
 			}
 			fprintf(f, "\n");
 			printf("\n");
@@ -664,23 +613,6 @@ int matrixMulApp::run()
 		}
 		fflush(f);
 		fclose(f);
-
-		//for (uint32_t l=0; l<P; l++) {
-		//	for(uint32_t k =0; k<M; k++) {
-		//		int res = 0;
-		//		int res2 = 0;
-		//		for(uint32_t i = 0; i < N; i++) {
-		//			for (uint32_t j=0; j<16; j++) {
-		//				res += (ptr[16 + k*N*16 + i*16 + j] * ptr[16 + M*N*16 + l*N*16 + i*16 + j]);
-		//			}
-		//			res2 += ptr2[k+ l*M + i*(((M*P+15)>>4)<<4)]; 
-		//		}
-		//		if (res != res2)
-		//		{
-		//			check = false;
-		//			printf("%d:%d\n", res, res2); 
-		//		}
-		//	}
 
 		if (check)
 			printf("\t<!RIGHT!><!RIGHT!><!RIGHT!><!RIGHT!><!RIGHT!>\n");

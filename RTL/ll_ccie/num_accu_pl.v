@@ -23,7 +23,7 @@ module num_accu_pl #(CACHE_WIDTH = 512, DATA_WIDTH = 32)
 	begin
 		if (rst)
 		begin
-			add_0_res[DATA_WIDTH-1 : 0] <= 0;
+			add_0_res <= 0;
 			enable0 <= 1'b0;
 			cnt <= 'd0;
 		end
@@ -32,21 +32,24 @@ module num_accu_pl #(CACHE_WIDTH = 512, DATA_WIDTH = 32)
 			$display("EN:%d, INC:%d, CNT:%d/%d, ADD_RES: %d", enable0, inc, cnt, size_out, array[DATA_WIDTH-1 : 0] + add_0_res[DATA_WIDTH-1 : 0]);
 			if (cnt < (size_out - 1))
 			begin
-				add_0_res[DATA_WIDTH-1 : 0] <= array[DATA_WIDTH-1 : 0] + add_0_res[DATA_WIDTH-1 : 0];
+				add_o_res <= array + add_0_res;
+				add_0_res <= array + add_0_res;
 				cnt <= cnt + 1;
-				enable0 <= 1'b0;
+				//TODO change to 1'b0;
+				enable0 <= 1'b1;
 			end
 			else 
 			begin
-				add_o_res[DATA_WIDTH-1 : 0] <= array[DATA_WIDTH-1 : 0] + add_0_res[DATA_WIDTH-1 : 0];
-				add_0_res[DATA_WIDTH-1 : 0] <= 'd0; 
+				add_o_res <= array + add_0_res;
+				add_0_res <= 'd0; 
 				enable0 <= 1'b1;
 				cnt <= 'd0;
 			end
 		end
 		else 
 		begin
-			add_0_res[DATA_WIDTH-1 : 0] <= add_0_res[DATA_WIDTH-1 : 0];
+			add_o_res <= 'd0;
+			add_0_res <= add_0_res;
 			cnt <= cnt;
 			enable0 <= 1'b0;
 		end
