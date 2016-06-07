@@ -65,7 +65,7 @@ module matrix_multiply_buf_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DA
 
 	localparam DATA_SIZE = CACHE_WIDTH/DATA_WIDTH;
 	localparam RAM_DEPTH = 1024/DATA_SIZE;
-	localparam 		addr_vec1 = 1;
+	localparam [ADDR_LMT-1:0] addr_vec1 = 1;
 
 	localparam [3:0]	
 	STATE_IDLE = 'd0, 
@@ -106,7 +106,7 @@ module matrix_multiply_buf_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DA
 	assign PN = P * N;
 	assign MP = M * P;
 	assign addr_vec2 = addr_vec1 + MN;
-	assign addr_wr_base = ((MN + PN + 1)<<4);
+	assign addr_wr_base = ((MN + PN + 20'd1)<<4);
 
 	// TEMP results
 	reg [CACHE_WIDTH-1:0] buffer [RAM_DEPTH-1:0];
@@ -130,7 +130,7 @@ module matrix_multiply_buf_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DA
 	reg [DATA_WIDTH-1:0] wr_cnt;
 
 
-	reg [ADDR_LMT+3:0] finish_cnt;
+	reg [DATA_WIDTH:0] finish_cnt;
 
 	// Control Signals
 	reg rd_req_f;
@@ -224,7 +224,7 @@ module matrix_multiply_buf_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DA
 			else
 			begin
 				vec1_select <= vec2_read ? 1'b1 : (~vec1_select);
-				rd_offset <= vec1_select ? (rd_offset + 1) : rd_offset;
+				rd_offset <= vec1_select ? (rd_offset + 20'd1) : rd_offset;
 
 				vec2_read <= vec2_read;
 
@@ -261,9 +261,9 @@ module matrix_multiply_buf_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DA
 				rd_offset <= rd_offset;
 			end
 
-			r_rd_req_addr <= rst?'d0:n_rd_req_addr;
-			r_rd_req_mdata <= rst?'d0:n_rd_req_mdata;
-			r_rd_req_en <= rst?'d0:n_rd_req_en;
+			r_rd_req_addr <= rst ? 20'd0 : n_rd_req_addr;
+			r_rd_req_mdata <= rst ? 14'd0 : n_rd_req_mdata;
+			r_rd_req_en <= rst ? 1'b0 : n_rd_req_en;
 		end
 	end
 
@@ -358,11 +358,11 @@ module matrix_multiply_buf_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DA
 			begin
 				r_wr_req_now <= 1'b1;
 				wr_cnt <= 'd0;
-				wr_idx <= ((wr_idx>>4) + 1)<<4;
+				wr_idx <= ((wr_idx>>4) + 24'd1)<<4;
 			end
 			else
 			begin
-				wr_idx <= wr_idx + 1;
+				wr_idx <= wr_idx + 24'd1;
 				r_wr_req_now <= 1'b0;
 				wr_cnt <= wr_cnt + 1;
 			end
