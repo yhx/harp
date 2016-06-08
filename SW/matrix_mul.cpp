@@ -438,7 +438,7 @@ int matrixMulApp::run()
 		int *ptr = (int*)pSource;
 		//INIT
 		FILE *f = NULL;
-		int M = 1, N = 4, P = 1;
+		int M = 4, N = 3, P = 2;
 		int M_ = ((M+15)>>4)<<4;
 		ptr[0] = M;
 		ptr[1] = N;
@@ -513,6 +513,7 @@ int matrixMulApp::run()
 			for(uint32_t k =0; k<M; k++) {
 				int res = 0;
 				for(uint32_t i = 0; i < N; i++) {
+					res = 0;
 					for (uint32_t j=0; j<16; j++) {
 						res += (ptr[16 + k*N*16 + i*16 + j] * ptr[16 + M*N*16 + l*N*16 + i*16 + j]);
 					}

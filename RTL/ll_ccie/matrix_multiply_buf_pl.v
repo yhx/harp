@@ -142,19 +142,20 @@ module matrix_multiply_buf_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DA
 	wire ready_mul;
 	wire ready_accu;
 
-	num_accu_pl #(
-		.CACHE_WIDTH (CACHE_WIDTH),
-		.DATA_WIDTH (DATA_WIDTH)
-	)
-	accuer (
-		.clk (clk),
-		.rst (rst),
-		.size_out ({12'd0, N}),
-		.inc (ready_mul),
-		.array (res_mul),
-		.res	(res_accu),
-		.ready	(ready_accu)
-	);
+	//TODO uncomment
+	//num_accu_pl #(
+	//	.CACHE_WIDTH (CACHE_WIDTH),
+	//	.DATA_WIDTH (DATA_WIDTH)
+	//)
+	//accuer (
+	//	.clk (clk),
+	//	.rst (rst),
+	//	.size_out ({12'd0, N}),
+	//	.inc (ready_mul),
+	//	.array (res_mul),
+	//	.res	(res_accu),
+	//	.ready	(ready_accu)
+	//);
 
 	array_mul_pl #(
 		.CACHE_WIDTH (CACHE_WIDTH),
@@ -345,11 +346,17 @@ module matrix_multiply_buf_pl #(ADDR_LMT = 20, MDATA = 14, CACHE_WIDTH = 512, DA
 	//Write request
 	always@(posedge clk)
 	begin
-		if (run && !wr_req_almostfull && ready_accu)
+		//TODO uncomment
+		//if (run && !wr_req_almostfull && ready_accu)
+		if (run && !wr_req_almostfull && ready_mul)
 		begin
-			$display("Write %d@%d", res_accu, wr_idx + addr_wr_base);
+			//TODO uncomment
+			//$display("Write %d@%d", res_accu, wr_idx + addr_wr_base);
+			$display("Write %d@%d", res_mul, wr_idx + addr_wr_base);
 			r_wr_req_addr <= wr_idx + addr_wr_base;
-			r_wr_req_data <= { 480'd0, res_accu};
+			//TODO uncomment
+			//r_wr_req_data <= { 480'd0, res_accu};
+			r_wr_req_data <= { 480'd0, res_mul};
 			r_wr_req_en <= 1'b1;
 			r_wr_req_direct <= 1'b0;
 			r_wr_req_mdata <= 'd0;
